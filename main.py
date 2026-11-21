@@ -7,9 +7,14 @@ Python 3.13, standard library only. No network, no randomness, no wall-clock:
 the program writes the same fixed string on every run, so its output is
 byte-identical across runs.
 
-Output: ``entry.txt`` in ``$MAKEFUN_OUTPUT_DIR`` when set, else ``/output``.
+Output: ``entry.txt`` in the output directory, resolved in this order:
+
+1. ``--output <path>`` (command-line argument, when given),
+2. ``$MAKEFUN_OUTPUT_DIR`` (when set),
+3. ``/output`` (fallback).
 """
 
+import argparse
 import os
 from pathlib import Path
 
@@ -19,8 +24,30 @@ JOKE = (
 )
 
 
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Write the demo joke to entry.txt in the output directory."
+    )
+    parser.add_argument(
+        "--output",
+        default=None,
+        help=(
+            "Output directory for entry.txt. Overrides $MAKEFUN_OUTPUT_DIR; "
+            "when omitted, $MAKEFUN_OUTPUT_DIR is used, else /output."
+        ),
+    )
+    return parser.parse_args(argv)
+
+
+def resolve_output_dir(output_arg):
+    if output_arg:
+        return Path(output_arg)
+    return Path(os.environ.get("MAKEFUN_OUTPUT_DIR", "/output"))
+
+
 def main() -> None:
-    output_dir = Path(os.environ.get("MAKEFUN_OUTPUT_DIR", "/output"))
+    args = parse_args()
+    output_dir = resolve_output_dir(args.output)
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "entry.txt").write_text(JOKE, encoding="utf-8")
 
